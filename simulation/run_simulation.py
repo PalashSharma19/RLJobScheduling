@@ -50,6 +50,10 @@ def run_simulation(scheduler, is_training=False, num_nodes=NUM_NODES,
             if is_overloaded:
                 overload_count += 1
                 
+            # Optional RL overload hook
+            if hasattr(scheduler, "log_overload"):
+                scheduler.log_overload(step, is_overloaded)
+                
             # 6. Update agent if training
             if is_training and hasattr(scheduler, "update"):
                 reward = scheduler.calculate_reward(nodes, latency, is_overloaded)
