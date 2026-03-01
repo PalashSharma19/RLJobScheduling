@@ -3,6 +3,7 @@ Metrics collection and training/evaluation wrappers.
 """
 from simulation.run_simulation import run_simulation
 from schedulers.rl_agent import QLearningScheduler
+from config import RANDOM_SEED
 
 def evaluate_scheduler(scheduler, runs=10):
     """
@@ -30,12 +31,17 @@ def train_rl(episodes=250):
     """
     agent = QLearningScheduler()
 
-    for _ in range(episodes):
-        # Run episode with training=True
-        run_simulation(agent, is_training=True)
+    def single_training_run():
+        for _ in range(episodes):
+            # Run episode with training=True
+            run_simulation(agent, is_training=True)
 
-        # Decay epsilon post-episode
-        agent.epsilon = max(0.05, agent.epsilon * 0.98)
+            # Decay epsilon post-episode
+            agent.epsilon = max(0.05, agent.epsilon * 0.98)
+
+    agent.run_stability_check(single_training_run, seed=RANDOM_SEED)
+    
+    agent.rl_diagnostics()
 
     return agent
 
@@ -47,8 +53,14 @@ def evaluate_rl(agent):
     original_epsilon = agent.epsilon
     agent.epsilon = 0.0
     
+    # Reset burst metrics before evaluation
+    agent.reset_burst_metrics()
+    
     # Evaluate via normal multiple runs logic
     avg_latency, overload_count, task_count = evaluate_scheduler(agent, runs=10)
+    
+    # Print burst metrics after evaluation
+    agent.print_burst_metrics()
     
     # Restore epsilon 
     agent.epsilon = original_epsilon
